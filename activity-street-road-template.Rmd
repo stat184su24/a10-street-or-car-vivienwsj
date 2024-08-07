@@ -1,6 +1,6 @@
 ---
 title: "Activity: Street or Road?"
-author: "YOUR NAME HERE"
+author: "Sijie Wu"
 output: html_notebook
 ---
 
@@ -8,37 +8,52 @@ output: html_notebook
 
 ```{r}
 #load libraries 
+library(dplyr)
+library(readr)
+library(tidyr)
+library(ggplot2)
 
 #load in the data here 
 # we will only be using the "street-addresses.csv" file from the text
-
-
-
+addresses <- read_csv("https://mdbeckman.github.io/dcSupplement/data/street-addresses.csv")
+head(addresses)
 ```
 
 ## Recreate Solved Example using `sample(50)`
 
 ```{r}
-
-
+# Sample 50 addresses
+sample_addresses <- addresses %>% sample_n(size = 50)
+# Define pattern to identify PO Box addresses
+po_pattern <- "BOX\\s+(\\d+)"
+# Find matches for PO Box addresses
+po_matches <- sample_addresses %>% filter(grepl(po_pattern, address))
+# Find addresses that don't match PO Box pattern
+po_dont <- sample_addresses %>% filter(!grepl(po_pattern, address))
+# Extract PO Box numbers
+box_numbers <- po_matches %>%
+  tidyr::extract(address, into = "boxnum", regex = po_pattern)
 ```
 
 ## Recreate Soved Example using the entire `Address` data set
 
 ```{r}
-
-
+# Find matches for PO Box addresses in the entire dataset
+po_matches_full <- addresses %>% filter(grepl(po_pattern, address))
+# Extract PO Box numbers from the entire dataset
+box_numbers_full <- po_matches_full %>%
+  tidyr::extract(address, into = "boxnum", regex = po_pattern)
 ```
 
 #### Additional Question: How many addresses are a PO BOX (including NCSU BOX)? 
 
 ```{r}
-
-
+# Count the number of PO Box addresses
+num_po_boxes <- nrow(po_matches_full)
+num_po_boxes
 ```
 
-My answer here...... 
-
+There are 11100 addresses a PO BOX.
 
 ## Back to the Streets: Your Turn
 
@@ -47,40 +62,58 @@ My answer here......
 ```{r}
 pattern <- "(ST|RD|ROAD)"
 LeftOvers <-
-  Addresses %>% 
+  addresses %>% 
   filter( !grepl(pattern, address),
           !grepl("\\sAPT|UNIT\\s[\\d]+$", address),
           !grepl(" BOX ", address)
           )
 ```
 
-My answer here.......
+pattern <- "(ST|RD|ROAD)": Defines a pattern to match street endings like "ST", "RD", and "ROAD".
+LeftOvers <- addresses %>%: Begins a pipeline to filter the addresses dataset.
+filter(!grepl(pattern, address),: Filters out addresses that contain the pattern defined above.
+!grepl("\\sAPT|UNIT\\s[\\d]+$", address),: Further filters out addresses that contain apartment or unit numbers.
+!grepl(" BOX ", address)): Additionally filters out addresses containing the word "BOX".
+
 
 #### Part 2: Implement your method on the entire `Addresses` data set. Explain how your code works line by line.
 
 ```{r}
-
-
-
+street_pattern <- "(ST|RD|ROAD|LANE|AVE|BLVD|DR|COURT|CIRCLE|HWY|WAY|TRL)"
+street_matches <- addresses %>% filter(grepl(street_pattern, address))
+street_types <- street_matches %>%
+  tidyr::extract(address, into = "street_type", regex = street_pattern)
 ```
 
-My answer here.......
+- street_pattern <- "(ST|RD|ROAD|LANE|AVE|BLVD|DR|COURT|CIRCLE|HWY|WAY|TRL)": Defines a pattern to match various common street types such as "ST", "RD", "ROAD", "LANE", "AVE", "BLVD", "DR", "COURT", "CIRCLE", "HWY", "WAY", and "TRL".
+- street_matches <- addresses %>%: Begins a pipeline to filter the addresses dataset.
+- filter(grepl(street_pattern, address)): Filters the dataset to retain only the rows where the address column contains one of the street types defined in street_pattern.
+- street_types <- street_matches %>%: Continues the pipeline with the filtered dataset street_matches.
+- tidyr::extract(address, into = "street_type", regex = street_pattern): Extracts the specific street type from each address and places it into a new column called street_type using the regular expression defined in street_pattern.
 
 #### Additional Question 1: Present your result from part 2 by providing a table in descending order of popularity for the street name endings you found
 
 ```{r}
+# Count the occurrences of each street type
+street_type_counts <- street_types %>%
+  count(street_type, sort = TRUE)
 
-
+# Display the counts
+street_type_counts
 ```
-
 #### Additional Question 2: Present your result by using ggplot to a bar chart in descending order of popularity for the street name endings you found previously.
 
 Note: make sure your order street names according to popularity, not alphabetically.
 
 ```{r}
-
+ggplot(street_type_counts, aes(x = reorder(street_type, n), y = n)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Popularity of Street Name Endings",
+       x = "Street Type",
+       y = "Count")
 ```
 
 #### Additional Question 3: Comment on any patterns you see
 
-My answer here.......
+The most common street types are likely to be "ST", "RD", and "AVE", which are standard abbreviations for streets, roads, and avenues. Less common types may include "LANE", "CIRCLE", and "COURT". This pattern is expected as streets, roads, and avenues are more frequently used in urban planning and address naming conventions.
